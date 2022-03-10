@@ -132,7 +132,8 @@ d_table = dash_table.DataTable(
     page_size=10,
     style_cell={
         'maxwidth':0
-    }
+    },
+    style_table={'overflowX': 'auto'},
 )
 
 app = dash.Dash()
@@ -149,4 +150,4 @@ app.layout = html.Div([
 )
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
