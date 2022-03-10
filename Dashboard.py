@@ -15,6 +15,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
 
 
 df = pd.read_csv("Training_Set_Values.csv")
@@ -46,6 +47,7 @@ dropped_df1["month"] = dropped_df1["date_recorded"].dt.month
 target= dropped_df1["Status"]
 data=dropped_df1.drop(columns=["date_recorded", "id", "Status"])
 x_train,x_test, y_train, y_test = train_test_split(data, target, test_size=0.2, random_state=42)
+
 KNN_pipe= Pipeline([('scaler', StandardScaler()), ('clf', KNeighborsClassifier())])
 KNN_grid= {
     "clf__n_neighbors" : np.arange(5,15,2)
@@ -54,6 +56,7 @@ KNN_clf = GridSearchCV(KNN_pipe, KNN_grid, n_jobs=3, cv=3, scoring="f1_micro")
 print("start knn fit")
 KNN_clf.fit(x_train,y_train)
 print("knn fit done")
+
 Logres_pipe= Pipeline([('scaler', StandardScaler()), ('clf', LogisticRegression())])
 Logres_grid= {
     "clf__C" : np.logspace(0.1,1000, num=5)
@@ -62,6 +65,7 @@ Logres_clf = GridSearchCV(Logres_pipe, Logres_grid, n_jobs=3, cv=3, scoring="f1_
 print("logres fit start")
 Logres_clf.fit(x_train,y_train)
 print("logres fit done")
+
 DTC_pipe= Pipeline([('scaler', StandardScaler()), ('clf', DecisionTreeClassifier())])
 DTC_grid= {
     "clf__max_features" : ["auto", "sqrt", "log2"]
@@ -75,12 +79,14 @@ model_name_list = ["kNearestNeighbors", "Logistic Regression", "Decision Tree Cl
 score_list=[]
 label_list=["functional", "functional needs repair","non functional"]
 
-for model in model_list:
-    score_list.append(round(model.best_score_,4))
 print("starting predictions")
 y_pred_knn=KNN_clf.predict(x_test)
 y_pred_logres=Logres_clf.predict(x_test)
 y_pred_dtc= DTC_clf.predict(x_test)
+
+score_list.append(round(f1_score(y_test,y_pred_knn, average='micro'),4))
+score_list.append(round(f1_score(y_test,y_pred_logres, average='micro'),4))
+score_list.append(round(f1_score(y_test,y_pred_dtc, average='micro'),4))
 
 print("starting data visualization")
 fig1= px.bar(y=model_name_list, x=score_list, hover_name=score_list)
