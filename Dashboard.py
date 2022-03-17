@@ -16,6 +16,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
+import dash_bootstrap_components as dbc
 
 
 df = pd.read_csv("Training_Set_Values.csv")
@@ -89,10 +90,11 @@ score_list.append(round(f1_score(y_test,y_pred_logres, average='micro'),4))
 score_list.append(round(f1_score(y_test,y_pred_dtc, average='micro'),4))
 
 print("starting data visualization")
-fig1= px.bar(y=model_name_list, x=score_list, hover_name=score_list)
+fig1= px.bar(y=model_name_list, x=score_list, hover_name=score_list, template="plotly_dark")
 fig1.update_layout(title_text="Classifier Score", title_x=0.5)
 fig1.update_xaxes(title_text="Accuracy Score")
 fig1.update_yaxes(title_text="Classification Model")
+fig1.update_layout({"plot_bgcolor": "rgb(30,30,30)", "paper_bgcolor": "rgb(30,30,30)", "font_color" : "white"})
 cf1=confusion_matrix(y_test, y_pred_knn, normalize="true", labels=label_list)
 cf2=confusion_matrix(y_test, y_pred_logres, normalize="true", labels=label_list)
 cf3=confusion_matrix(y_test, y_pred_dtc, normalize="true", labels=label_list)
@@ -110,15 +112,25 @@ dropdown_buttons = [
 fig2.update_xaxes(title_text="Predicted Label")
 fig2.update_yaxes(title_text="True Label")
 fig2.update_layout(title_text="KNearestNeighbors classification Matrix")
+fig2.update_layout({"plot_bgcolor": "rgb(30,30,30)", "paper_bgcolor": "rgb(30,30,30)", "font_color" : "white"})
 fig2.data[1].visible=False
 fig2.data[2].visible=False
-fig2.update_layout(updatemenus=[{'type': "dropdown",'x': 1.25,'y': 0.5,'showactive': True,'active': 0,'buttons': dropdown_buttons}], title_x=0.5)
+fig2.update_layout(updatemenus=[{'type': "dropdown",'x': 1.25,'y': 1.18,'showactive': True,'active': 0,'buttons': dropdown_buttons}], title_x=0.5)
 
 bar = px.bar(x=value_count.index, y=value_count, color_discrete_sequence=color_list,
-             color=value_count.index, title="Target Data Distribution", hover_name=value_count
+             color=value_count.index, title="Target Data Distribution", hover_name=value_count, template="plotly_dark"
              )
 bar.update_xaxes(title_text="Label")
 bar.update_yaxes(title_text="Quantity")
+bar.update_layout({"plot_bgcolor": "rgb(30,30,30)", "paper_bgcolor": "rgb(30,30,30)", "font_color" : "white"})
+
+df["funder"]=df["funder"].fillna("unknown")
+
+map=px.scatter_geo(data_frame=df.sample(n=10000),
+    lon="longitude",
+    lat="latitude", hover_name="funder"
+)
+map.update_layout({"plot_bgcolor": "rgb(30,30,30)", "paper_bgcolor": "rgb(30,30,30)", "font_color" : "white",})
 
 data_cols = [x for x in dropped_df.columns]
 d_columns = [{'name': x, 'id': x} for x in data_cols]
@@ -134,20 +146,70 @@ d_table = dash_table.DataTable(
         'maxwidth':0
     },
     style_table={'overflowX': 'auto'},
+    style_header={
+        'backgroundColor': 'rgb(30, 30, 30)',
+        'color': 'white'
+    },
+    style_data={
+        'backgroundColor': 'rgb(30, 30, 30)',
+        'color': 'white'
+    },
+    style_filter={
+            'backgroundColor': 'rgb(30,30,30)',
+            'color': 'white'
+    },  
 )
+cards=[]
+for score, model in zip(score_list, model_name_list):
+    cards.append(dbc.Card(
+        [
+            html.H2(f"{score*100:.2f}%", className="card-title"),
+            html.P(f"{model} Test Accuracy", className="card-text"),
+        ],
+        body=True,
+        color="dark",
+        inverse=True,
+    ))
 
-app = dash.Dash()
+pie=px.pie(df_labels, names="status_group")
+pie.update_layout({"plot_bgcolor": "rgb(30,30,30)", "paper_bgcolor": "rgb(30,30,30)", "font_color" : "white",})
+
+
+app = dash.Dash(external_stylesheets=[dbc.themes.DARKLY])
 app.layout = html.Div([
     html.H1("Predictive Maintenance on Water Pump Dataset"),
+    html.Br(),
     d_table,
-    html.P("Dataset Distribution"),
-    dcc.Graph(figure=bar),
-    html.P("Accuracy Score"),
-    dcc.Graph(figure=fig1),
-    html.P("Confusion Matrix"),
-    dcc.Graph(figure=fig2)],
-    style={'text-align': 'center'}
-)
+    html.Div([
+        html.P("Dataset Distribution"),
+        dcc.Graph(figure=bar)],
+        style={"text-align": "center", "width": "49%", "display": "inline-block"}
+    ),
+    html.Div([
+        html.P("Pie Chart of Dataset Distribution"),
+        dcc.Graph(figure=pie)],
+        style={"text-align": "center", "width": "49%", "display": "inline-block"},
+    ),
+    html.Div([
+        html.P("Geographic Distribution of 10000 random WaterPumps in the dataset"),
+        dcc.Graph(figure=map)],
+        style={"text-align": "center", "width": "49%", "display": "inline-block"}
+    ),html.Br(),
+    html.Div([
+        dbc.Container(
+        [dbc.Row([dbc.Col(card) for card in cards]),
+    ],fluid=False
+    )]),
+    html.Br(),
+    html.Div([
+        dcc.Graph(figure=fig1)
+    ], style={"text-align": "center", "width": "49%", "display": "inline-block"}
+    ), html.Div([
+        dcc.Graph(figure=fig2)
+    ], style={"text-align": "center", "width": "49%", "display": "inline-block"}
+    )
+], 
+style={"text-align": "center"})
 
 if __name__ == '__main__':
     app.run_server(debug=False)
